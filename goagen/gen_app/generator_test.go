@@ -26,26 +26,22 @@ var _ = Describe("NewGenerator", func() {
 			os.RemoveAll("_foo")
 		})
 
-		It("instantiates a generator with initialized writers", func() {
-			design.Design = &design.APIDefinition{Name: "foo"}
+		It("instantiates a generator", func() {
+			design.Design = &design.APIDefinition{
+				APIVersionDefinition: &design.APIVersionDefinition{Name: "foo"},
+			}
 			var err error
 			gen, err = genapp.NewGenerator()
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(gen).ShouldNot(BeNil())
-			Ω(gen.ContextsWriter).ShouldNot(BeNil())
-			Ω(gen.ControllersWriter).ShouldNot(BeNil())
-			Ω(gen.ResourcesWriter).ShouldNot(BeNil())
 		})
 
-		It("instantiates a generator with initialized writers even if Design is not initialized", func() {
+		It("instantiates a generator with initialized writers", func() {
 			design.Design = nil
 			var err error
 			gen, err = genapp.NewGenerator()
 			Ω(err).ShouldNot(HaveOccurred())
 			Ω(gen).ShouldNot(BeNil())
-			Ω(gen.ContextsWriter).ShouldNot(BeNil())
-			Ω(gen.ControllersWriter).ShouldNot(BeNil())
-			Ω(gen.ResourcesWriter).ShouldNot(BeNil())
 		})
 	})
 })
@@ -77,9 +73,11 @@ var _ = Describe("Generate", func() {
 	Context("with a dummy API", func() {
 		BeforeEach(func() {
 			design.Design = &design.APIDefinition{
-				Name:        "test api",
-				Title:       "dummy API with no resource",
-				Description: "I told you it's dummy",
+				APIVersionDefinition: &design.APIVersionDefinition{
+					Name:        "test api",
+					Title:       "dummy API with no resource",
+					Description: "I told you it's dummy",
+				},
 			}
 		})
 
@@ -153,11 +151,13 @@ var _ = Describe("Generate", func() {
 				Identifier:         "vnd.rightscale.codegen.test.widgets",
 			}
 			design.Design = &design.APIDefinition{
-				Name:        "test api",
-				Title:       "dummy API with no resource",
-				Description: "I told you it's dummy",
-				Resources:   map[string]*design.ResourceDefinition{"Widget": &res},
-				MediaTypes:  map[string]*design.MediaTypeDefinition{"vnd.rightscale.codegen.test.widgets": &mt},
+				APIVersionDefinition: &design.APIVersionDefinition{
+					Name:        "test api",
+					Title:       "dummy API with no resource",
+					Description: "I told you it's dummy",
+					Resources:   map[string]*design.ResourceDefinition{"Widget": &res},
+				},
+				MediaTypes: map[string]*design.MediaTypeDefinition{"vnd.rightscale.codegen.test.widgets": &mt},
 			}
 		})
 
@@ -208,7 +208,7 @@ var _ = Describe("Generate", func() {
 })
 
 const contextsCodeTmpl = `//************************************************************************//
-// test api: Application Contexts
+// API "test api": Application Contexts
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
@@ -256,7 +256,7 @@ func (ctx *GetWidgetContext) OK(resp ID) error {
 `
 
 const controllersCodeTmpl = `//************************************************************************//
-// test api: Application Controllers
+// API "test api": Application Controllers
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
@@ -296,7 +296,7 @@ func MountWidgetController(service goa.Service, ctrl WidgetController) {
 `
 
 const hrefsCodeTmpl = `//************************************************************************//
-// test api: Application Resource Href Factories
+// API "test api": Application Resource Href Factories
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen
@@ -317,7 +317,7 @@ func WidgetHref(id interface{}) string {
 `
 
 const mediaTypesCodeTmpl = `//************************************************************************//
-// test api: Application Media Types
+// API "test api": Application Media Types
 //
 // Generated with goagen v0.0.1, command line:
 // $ goagen

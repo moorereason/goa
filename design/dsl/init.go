@@ -6,8 +6,11 @@ import "github.com/raphael/goa/design"
 // response templates.
 func InitDesign() {
 	ctxStack = nil // mostly for tests
-	design.Design = &design.APIDefinition{}
-	design.Design.DefaultResponseTemplates = make(map[string]*design.ResponseTemplateDefinition)
+	design.Design = &design.APIDefinition{
+		APIVersionDefinition: &design.APIVersionDefinition{
+			DefaultResponseTemplates: make(map[string]*design.ResponseTemplateDefinition),
+		},
+	}
 	t := func(params ...string) *design.ResponseDefinition {
 		if len(params) < 1 {
 			ReportError("expected media type as argument when invoking response template OK")
