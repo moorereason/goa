@@ -66,6 +66,7 @@ type (
 		Routes       []*design.RouteDefinition
 		Responses    map[string]*design.ResponseDefinition
 		API          *design.APIDefinition
+		Version      *design.APIVersionDefinition
 	}
 
 	// ControllerTemplateData contains the information required to generate an action handler.
