@@ -65,8 +65,11 @@ func NewMiddleware(m interface{}) (mw Middleware, err error) {
 	return
 }
 
-// ReqIDKey is the RequestID middleware key used to store the request ID value in the context.
-const ReqIDKey middlewareKey = 0
+// VersionKey is the context key used to store the current request API version if any.
+const VersionKey middlewareKey = 0
+
+// ReqIDKey is the context key used by the RequestID middleware to store the request ID value.
+const ReqIDKey middlewareKey = 1
 
 // RequestIDHeader is the name of the header used to transmit the request ID.
 const RequestIDHeader = "X-Request-Id"
@@ -93,6 +96,37 @@ func init() {
 // middlewareKey is the private type used for goa middlewares to store values in the context.
 // It is private to avoid possible collisions with keys used by other packages.
 type middlewareKey int
+
+// VersionSetter is a middleware that looks for the requested API version in a given header and/or
+// querystring value. It initializes the VersionKey value of the context with the version if it
+// finds one or with the given default value if not the empty string.
+// The goa request handler looks for this value in the context and if found dispatches to the
+// controller in the corresponding version package.
+func VersionSetter(header, query, def string) Middleware {
+	lookForHeader := header != ""
+	lookForQuery := query != ""
+	hasDefault := def != ""
+	return func(h Handler) Handler {
+		return func(ctx *Context) error {
+			if lookForHeader {
+				if hdr := ctx.Request().Header.Get(header); hdr != "" {
+					ctx.SetValue(VersionKey, hdr)
+					return h(ctx)
+				}
+			}
+			if lookForQuery {
+				if q := ctx.Request().URL.Query().Get(query); q != "" {
+					ctx.SetValue(VersionKey, q)
+					return h(ctx)
+				}
+			}
+			if hasDefault {
+				ctx.SetValue(VersionKey, def)
+			}
+			return h(ctx)
+		}
+	}
+}
 
 // LogRequest creates a request logger middleware.
 // This middleware is aware of the RequestID middleware and if registered after it leverages the
