@@ -28,6 +28,7 @@ install:
   # - go env
   - mkdir c:\gopath
   - copy c:\MinGW\bin\mingw32-make.exe c:\MinGW\bin\make.exe
+  - set PATH="%PATH%;c:\MinGW\bin"
   # - go get -u github.com/golang/lint/golint
   # - go get -u golang.org/x/tools/cmd/cover
   # - go get -u golang.org/x/tools/cmd/goimports
