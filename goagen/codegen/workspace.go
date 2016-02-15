@@ -3,7 +3,6 @@ package codegen
 import (
 	"bytes"
 	"fmt"
-	"go/ast"
 	"go/format"
 	"go/parser"
 	"go/scanner"
@@ -17,6 +16,7 @@ import (
 	"text/template"
 
 	"golang.org/x/tools/go/ast/astutil"
+	"golang.org/x/tools/imports"
 )
 
 type (
@@ -215,12 +215,12 @@ func SourceFileFor(path string) (*SourceFile, error) {
 }
 
 // WriteHeader writes the generic generated code header.
-func (f *SourceFile) WriteHeader(title, pack string, imports []*ImportSpec) error {
+func (f *SourceFile) WriteHeader(title, pack string, imps []*ImportSpec) error {
 	ctx := map[string]interface{}{
 		"Title":       title,
 		"ToolVersion": Version,
 		"Pkg":         pack,
-		"Imports":     imports,
+		"Imports":     imps,
 	}
 	if err := headerTmpl.Execute(f, ctx); err != nil {
 		return fmt.Errorf("failed to generate contexts: %s", err)
@@ -239,11 +239,12 @@ func (f *SourceFile) Write(b []byte) (int, error) {
 	return file.Write(b)
 }
 
-// FormatCode runs "goimports -w" on the source file.
+// FormatCode applies goimports-style formatting on the source file.
 func (f *SourceFile) FormatCode() error {
 	if NoFormat {
 		return nil
 	}
+
 	// Parse file into AST
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, f.Abs(), nil, parser.ParseComments)
@@ -254,8 +255,8 @@ func (f *SourceFile) FormatCode() error {
 		return fmt.Errorf("%s\n========\nContent:\n%s", buf.String(), content)
 	}
 	// Clean unused imports
-	imports := astutil.Imports(fset, file)
-	for _, group := range imports {
+	imps := astutil.Imports(fset, file)
+	for _, group := range imps {
 		for _, imp := range group {
 			path := strings.Trim(imp.Path.Value, `"`)
 			if !astutil.UsesImport(file, path) {
@@ -263,15 +264,27 @@ func (f *SourceFile) FormatCode() error {
 			}
 		}
 	}
-	ast.SortImports(fset, file)
-	// Open file to be written
-	w, err := os.OpenFile(f.Abs(), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	defer w.Close()
+
 	// Write formatted code without unused imports
-	return format.Node(w, fset, file)
+	var b bytes.Buffer
+	format.Node(&b, fset, file)
+
+	// Run goimports-style formatter
+	options := &imports.Options{
+		TabWidth:   8,
+		TabIndent:  true,
+		Comments:   true,
+		FormatOnly: true,
+	}
+
+	res, err := imports.Process(f.Abs(), b.Bytes(), options)
+	if err != nil {
+		var buf bytes.Buffer
+		scanner.PrintError(&buf, err)
+		return fmt.Errorf("%s\n========\nContent:\n%s", buf.String(), b)
+	}
+
+	return ioutil.WriteFile(f.Abs(), res, 0)
 }
 
 // Abs returne the source file absolute filename
